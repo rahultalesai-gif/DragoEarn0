@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Jungle Draco - Pro Tap to Earn</title>
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Plus+Jakarta+Sans:wght@500;700;800;900&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet"/>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "jungle-dark": "#02150d",
+          "jungle-surface": "#06281a",
+          "jungle-card": "#0b3825",
+          "jungle-neon": "#4edea3",
+          "jungle-gold": "#f59e0b",
+          "jungle-amber": "#fbbf24"
+        },
+        fontFamily: {
+          "body": ["Plus Jakarta Sans", "sans-serif"],
+          "title": ["Cinzel", "serif"],
+          "mono": ["JetBrains Mono", "monospace"]
+        },
+        animation: {
+          'dragon-float': 'dragonHover 3.5s ease-in-out infinite',
+          'pedestal-glow': 'pedestalGlow 3s ease-in-out infinite',
+          'firefly-1': 'floatParticle 6s ease-in-out infinite',
+          'firefly-2': 'floatParticle 8s ease-in-out infinite 1.5s',
+          'radar-ping': 'radarPing 1.5s cubic-bezier(0, 0, 0.2, 1) infinite',
+          'spin-fast': 'spin 1s linear infinite'
+        },
+        keyframes: {
+          dragonHover: { '0%, 100%': { transform: 'translateY(0) scale(1)' }, '50%': { transform: 'translateY(-14px) scale(1.02)' } },
+          pedestalGlow: { '0%, 100%': { opacity: 0.6, transform: 'scale(1)' }, '50%': { opacity: 0.9, transform: 'scale(1.1)' } },
+          floatParticle: { '0%, 100%': { transform: 'translate(0, 0)', opacity: 0.2 }, '50%': { transform: 'translate(25px, -40px)', opacity: 0.9 } },
+          radarPing: { '75%, 100%': { transform: 'scale(2)', opacity: '0' } }
+        }
+      }
+    }
+  }
+</script>
+
+<style>
+  * { -webkit-tap-highlight-color: transparent; user-select: none; touch-action: manipulation; }
+  body { background: radial-gradient(circle at 50% 30%, #0d4a30 0%, #042013 55%, #010e08 100%); min-height: 100dvh; font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; }
+  .stone-contact-shadow { background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.95) 0%, rgba(2, 21, 13, 0.7) 50%, transparent 75%); filter: blur(12px); }
+  .dragon-blended { filter: drop-shadow(0 0 25px rgba(78, 222, 163, 0.5)) drop-shadow(0 20px 30px rgba(0, 0, 0, 0.85)); transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+  .tap-particle { position: fixed; z-index: 9999; pointer-events: none; font-family: 'JetBrains Mono', monospace; font-weight: 900; animation: popUp 0.75s ease-out forwards; }
+  @keyframes popUp { 0% { transform: translate(-50%, 0) scale(0.6); opacity: 1; } 50% { transform: translate(-50%, -45px) scale(1.35); opacity: 1; } 100% { transform: translate(-50%, -90px) scale(0.85); opacity: 0; } }
+  .flying-coin { position: fixed; z-index: 99999; pointer-events: none; font-size: 22px; filter: drop-shadow(0 0 8px #f59e0b); transition: transform 0.85s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.85s ease-in; }
+
+  .jungle-panel { background: rgba(6, 40, 26, 0.85); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(78, 222, 163, 0.25); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5); }
+  .tab-screen { display: none; opacity: 0; transform: translateY(8px); transition: opacity 0.2s ease, transform 0.2s ease; }
+  .tab-screen.active { display: flex; opacity: 1; transform: translateY(0); }
+
+  .btn-claim { background: linear-gradient(135deg, #4edea3 0%, #10b981 100%); box-shadow: 0 4px 15px rgba(78, 222, 163, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.4); transition: all 0.2s ease; }
+  .btn-claim:active:not(:disabled) { transform: scale(0.92); }
+  .btn-claim:disabled { background: #374151; box-shadow: none; color: #9ca3af; opacity: 0.7; }
+
+  .btn-ad-claim { background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.4); transition: all 0.2s ease; }
+  .btn-ad-claim:active:not(:disabled) { transform: scale(0.92); }
+  .btn-ad-claim:disabled { background: #374151; box-shadow: none; color: #9ca3af; opacity: 0.7; }
+
+  .upgrade-card { background: linear-gradient(145deg, rgba(6, 40, 26, 0.9), rgba(2, 21, 13, 0.95)); border: 1px solid rgba(78, 222, 163, 0.3); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6); }
+  .popup-animate-in { animation: popupIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+  @keyframes popupIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+  .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 4px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: #4edea3; border-radius: 4px; }
+
+  /* SPIN WHEEL CSS */
+  .wheel-container { position: relative; width: 240px; height: 240px; border-radius: 50%; overflow: hidden; border: 4px solid #fbbf24; box-shadow: 0 0 25px rgba(245, 158, 11, 0.5); background: conic-gradient(#10b981 0 60deg, #064e3b 60deg 120deg, #10b981 120deg 180deg, #064e3b 180deg 240deg, #10b981 240deg 300deg, #064e3b 300deg 360deg); transition: transform 4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+  .wheel-label { position: absolute; width: 100px; height: 120px; left: 50%; transform-origin: bottom center; text-align: center; padding-top: 15px; margin-left: -50px; font-weight: 900; color: white; text-shadow: 1px 1px 3px black; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; font-family: 'JetBrains Mono', monospace; font-size: 14px; }
+  .wheel-pointer { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); font-size: 35px; z-index: 10; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); }
+
+  /* WITHDRAW INPUT CSS */
+  .withdraw-input { width: 100%; background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(78, 222, 163, 0.4); color: #ffffff; border-radius: 8px; padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 14px; outline: none; margin-bottom: 8px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); }
+  .withdraw-input:focus { border-color: #4edea3; box-shadow: 0 0 8px rgba(78, 222, 163, 0.5), inset 0 2px 5px rgba(0,0,0,0.5); }
+  .withdraw-input::placeholder { color: #9ca3af; }
+
+  /* LUCKY BOX 3-SLOT REEL CSS */
+  .lucky-reel-wrapper { width: 240px; height: 80px; margin: 0 auto; background: #000; border-radius: 12px; border: 2px solid #4edea3; overflow: hidden; position: relative; box-shadow: inset 0 0 20px rgba(0,0,0,1); }
+  .lucky-reel-content { display: flex; align-items: center; height: 100%; width: max-content; }
+  .reel-item { width: 80px; height: 80px; display: flex; justify-content: center; align-items: center; font-size: 45px; flex-shrink: 0; }
+  .reel-center-mark { position: absolute; top: 0; bottom: 0; left: 80px; width: 80px; border-left: 2px solid rgba(78,222,163,0.5); border-right: 2px solid rgba(78,222,163,0.5); background: linear-gradient(90deg, transparent, rgba(78,222,163,0.2), transparent); pointer-events: none; z-index: 10; }
+</style>
+</head>
+
+<body class="text-white flex flex-col justify-between min-h-screen p-3 pb-2 relative">
+
+  <div class="fixed top-12 left-10 w-2.5 h-2.5 rounded-full bg-jungle-neon blur-[1px] animate-firefly-1 pointer-events-none"></div>
+  <div class="fixed top-1/3 right-8 w-3 h-3 rounded-full bg-jungle-amber blur-[1px] animate-firefly-2 pointer-events-none"></div>
+  <div class="fixed top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-jungle-neon/10 rounded-full blur-[100px] pointer-events-none"></div>
+
+  <header id="main-header" class="flex flex-col gap-2 z-20">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div id="tg-avatar-box" class="w-8 h-8 rounded-full bg-emerald-500/20 border border-jungle-neon/40 flex items-center justify-center text-sm font-bold shadow-md text-jungle-neon">🐉</div>
+        <div>
+          <h1 id="tg-user-name" class="text-xs font-mono uppercase text-jungle-neon font-bold tracking-wider">JUNGLE EXPLORER</h1>
+          <p class="text-[10px] text-gray-300">@<span id="tg-user-handle">player</span> • Lvl <span id="dragon-level">1</span></p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <button class="bg-amber-500/20 border border-amber-400/40 px-3 py-1 rounded-full text-xs active:scale-90 flex items-center gap-1.5 text-jungle-amber font-mono font-bold shadow-md" onclick="openDailyCheckinModal()">
+          <span>🎁</span> <span id="daily-btn-text">DAILY</span>
+        </button>
+        <button id="sound-toggle-btn" class="bg-jungle-surface/80 border border-jungle-neon/30 p-1.5 rounded-full text-xs active:scale-90" onclick="toggleSound()">
+          <span id="sound-icon">🔊</span>
+        </button>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 gap-2 mt-0.5">
+      <div id="gold-balance-card" class="jungle-panel rounded-2xl p-2.5 flex items-center justify-between border-jungle-amber/30 transition-transform duration-200">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center text-lg shadow-inner">🪙</div>
+          <div>
+            <div class="text-[9px] font-mono text-gray-400">GOLD COINS</div>
+            <div class="text-base font-black text-jungle-amber font-mono" id="gold-balance">0</div>
+          </div>
+        </div>
+      </div>
+      <div class="jungle-panel rounded-2xl p-2.5 flex items-center justify-between border-jungle-neon/30">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-lg shadow-inner">⚡</div>
+          <div>
+            <div class="text-[9px] font-mono text-gray-400">PER TAP</div>
+            <div class="text-base font-black text-jungle-neon font-mono" id="per-tap-display">+1 GOLD</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main id="tab-home" class="tab-screen active flex-1 flex-col items-center justify-center my-auto z-10 w-full mt-2">
+    <div class="relative w-full max-w-[340px] h-[280px] flex flex-col items-center justify-center cursor-pointer" id="dragon-container" onclick="handleTap(event)">
+      <div class="absolute w-72 h-72 rounded-full bg-gradient-to-tr from-jungle-neon/25 via-emerald-600/15 to-transparent blur-3xl animate-pedestal-glow pointer-events-none"></div>
+      <div class="absolute bottom-1 w-72 h-20 pointer-events-none flex items-center justify-center">
+        <div class="w-68 h-16 bg-gradient-to-b from-[#1b3d2b] to-[#091b12] rounded-[50%] border-t-2 border-emerald-400/50 shadow-[0_15px_35px_rgba(0,0,0,0.95)] relative overflow-hidden">
+          <div class="absolute top-1 left-6 w-16 h-3.5 bg-emerald-500/35 rounded-full blur-[2px]"></div>
+          <div class="absolute top-2 right-10 w-20 h-3.5 bg-emerald-400/30 rounded-full blur-[2px]"></div>
+        </div>
+        <div class="absolute top-2 w-56 h-10 stone-contact-shadow"></div>
+      </div>
+      <div id="dragon-wrapper" class="relative z-10 w-[270px] h-[270px] flex items-center justify-center animate-dragon-float will-change-transform">
+        <img id="dragon-image" src="https://i.ibb.co/Xk4Pp210/835112748-1787289753732459-removebg-preview.png" alt="Jungle Dragon" class="w-full h-full object-contain dragon-blended pointer-events-none" />
+      </div>
+    </div>
+
+    <div class="w-full max-w-sm grid grid-cols-2 gap-2.5 mt-2.5 mb-1.5 px-1">
+      <button class="jungle-panel hover:bg-emerald-900/60 active:scale-95 transition-transform rounded-2xl p-2.5 flex items-center justify-between border-jungle-neon/40 shadow-lg group" onclick="openBoostModal()">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-jungle-neon/20 flex items-center justify-center text-base">🚀</div>
+          <div class="text-left">
+            <div class="text-xs font-black text-jungle-neon tracking-wide">Boost</div>
+            <div class="text-[9px] text-gray-300 font-mono" id="boost-btn-sub">+1 Tap</div>
+          </div>
+        </div>
+        <span class="text-xs text-jungle-neon font-bold">➔</span>
+      </button>
+      <button class="jungle-panel hover:bg-emerald-900/60 active:scale-95 transition-transform rounded-2xl p-2.5 flex items-center justify-between border-jungle-amber/40 shadow-lg group" onclick="openEnergyModal()">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-amber-500/20 flex items-center justify-center text-base">🔋</div>
+          <div class="text-left">
+            <div class="text-xs font-black text-jungle-amber tracking-wide">Energy</div>
+            <div class="text-[9px] text-gray-300 font-mono" id="energy-btn-sub">+500 ⚡</div>
+          </div>
+        </div>
+        <span class="text-xs text-jungle-amber font-bold">➔</span>
+      </button>
+    </div>
+
+    <div class="w-full max-w-sm flex flex-col gap-1 px-1">
+      <div class="flex items-center justify-between text-xs font-mono">
+        <div class="flex items-center gap-1.5 text-jungle-neon font-extrabold">
+          <span>⚡</span><span id="energy-display">1000 / 1000</span>
+        </div>
+        <div class="text-gray-400 text-[10px]">⚡ +1 Energy/sec</div>
+      </div>
+      <div class="w-full h-3 bg-jungle-dark rounded-full overflow-hidden p-0.5 border border-jungle-neon/30 shadow-inner">
+        <div id="energy-bar" class="h-full bg-gradient-to-r from-emerald-500 via-jungle-neon to-jungle-amber rounded-full transition-all duration-150" style="width: 100%;"></div>
+      </div>
+    </div>
+  </main>
+
+  <main id="tab-task" class="tab-screen flex-1 flex-col gap-3 my-auto z-10 w-full max-w-md mx-auto py-2">
+    <div class="text-center mb-1">
+      <h2 class="text-xl font-extrabold text-jungle-neon font-mono">SPONSOR QUESTS</h2>
+      <p class="text-xs text-gray-400">Complete offers to earn premium game passes</p>
+    </div>
+
+    <div class="flex flex-col gap-2.5 h-[62vh] overflow-y-auto pb-24 pr-1 custom-scrollbar">
+      
+      <div class="bg-gradient-to-r from-jungle-card to-[#0d3623] rounded-2xl p-3 flex items-center justify-between border border-jungle-neon/60 shadow-[0_0_15px_rgba(78,222,163,0.2)]">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-2xl shadow-inner">👥</div>
+          <div>
+            <h4 class="font-black text-xs text-white tracking-wide">Refer A Friend</h4>
+            <p class="text-[11px] text-jungle-neon font-mono font-bold">Reward: +5000 🪙</p>
+          </div>
+        </div>
+        <button class="btn-claim text-black font-black px-4 py-2 rounded-xl text-[10px] font-mono tracking-wider shadow-lg active:scale-95" onclick="openReferralModal()">INVITE</button>
+      </div>
+
+      <div class="jungle-panel rounded-2xl p-3 flex items-center justify-between border-emerald-500/40">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-white/10 p-1 flex items-center justify-center shadow-inner">
+            <img src="https://i.ibb.co/SbBYyQJ/adsgram-logo-removebg-preview.png" class="w-full h-full object-contain" alt="Adsgram">
+          </div>
+          <div>
+            <h4 class="font-bold text-xs">Adsgram Elite Task</h4>
+            <p class="text-[11px] text-jungle-amber font-mono font-bold">Reward: +150 🪙</p>
+          </div>
+        </div>
+        <button id="btn-ad-adsgram" class="btn-ad-claim text-black font-black px-3 py-2 rounded-xl text-[10px] font-mono tracking-wider w-20 text-center" onclick="triggerTaskAd(event, 'adsgram', 'coin', 150)">WATCH</button>
+      </div>
+
+      <div class="jungle-panel rounded-2xl p-3 flex items-center justify-between border-amber-500/20">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-white/10 p-1 flex items-center justify-center shadow-inner">
+            <img src="https://i.ibb.co/ZsVp3bv/images-2-removebg-preview.png" class="w-full h-full object-contain" alt="Monetag">
+          </div>
+          <div>
+            <h4 class="font-bold text-xs">Monetag Offer</h4>
+            <p class="text-[11px] text-jungle-neon font-mono font-bold">Reward: +1 Spin 🎡</p>
+          </div>
+        </div>
+        <button id="btn-ad-monetag" class="btn-claim text-black font-black px-3 py-2 rounded-xl text-[10px] font-mono tracking-wider w-20 text-center" onclick="triggerTaskAd(event, 'monetag', 'spin', 1)">WATCH</button>
+      </div>
+
+      <div class="jungle-panel rounded-2xl p-3 flex items-center justify-between border-amber-500/20">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-white/10 p-1 flex items-center justify-center shadow-inner">
+            <img src="https://i.ibb.co/99MBR9vj/images-removebg-preview.png" class="w-full h-full object-contain" alt="Richads">
+          </div>
+          <div>
+            <h4 class="font-bold text-xs">RichAds Network</h4>
+            <p class="text-[11px] text-jungle-neon font-mono font-bold">Reward: +1 Spin 🎡</p>
+          </div>
+        </div>
+        <button id="btn-ad-richads" class="btn-claim text-black font-black px-3 py-2 rounded-xl text-[10px] font-mono tracking-wider w-20 text-center" onclick="triggerTaskAd(event, 'richads', 'spin', 1)">WATCH</button>
+      </div>
+
+      <div class="jungle-panel rounded-2xl p-3 flex items-center justify-between border-amber-500/20">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-white/10 p-1 flex items-center justify-center shadow-inner">
+            <img src="https://i.ibb.co/hRCg4TTq/images-removebg-preview-1.png" class="w-full h-full object-contain" alt="Tads">
+          </div>
+          <div>
+            <h4 class="font-bold text-xs">Tads Sponsor</h4>
+            <p class="text-[11px] text-jungle-neon font-mono font-bold">Reward: +1 Spin 🎡</p>
+          </div>
+        </div>
+        <button id="btn-ad-tads" class="btn-claim text-black font-black px-3 py-2 rounded-xl text-[10px] font-mono tracking-wider w-20 text-center" onclick="triggerTaskAd(event, 'tads', 'spin', 1)">WATCH</button>
+      </div>
+
+      <div class="jungle-panel rounded-2xl p-3 flex items-center justify-between border-emerald-500/20">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-white/10 p-1 flex items-center justify-center shadow-inner">
+            <img src="https://i.ibb.co/v6PmgwJV/1766836321888-gigapub-logo-removebg-preview.png" class="w-full h-full object-contain scale-110" alt="Gigapub">
+          </div>
+          <div>
+            <h4 class="font-bold text-xs">Gigapub Media</h4>
+            <p class="text-[11px] text-jungle-neon font-mono font-bold">Reward: +1 Box 🎁</p>
+          </div>
+        </div>
+        <button id="btn-ad-gigapub" class="bg-gray-200 text-black font-black px-3 py-2 rounded-xl text-[10px] font-mono tracking-wider w-20 text-center shadow-md active:scale-95" onclick="triggerTaskAd(event, 'gigapub', 'box', 1)">WATCH</button>
+      </div>
+
+      <div class="jungle-panel rounded-2xl p-3 flex items-center justify-between border-emerald-500/20">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-white/10 p-1 flex items-center justify-center shadow-inner">
+            <img src="https://i.ibb.co/chLvXfpy/images-1-removebg-preview.png" class="w-full h-full object-contain" alt="Onclicka">
+          </div>
+          <div>
+            <h4 class="font-bold text-xs">Onclicka Ad</h4>
+            <p class="text-[11px] text-jungle-neon font-mono font-bold">Reward: +1 Box 🎁</p>
+          </div>
+        </div>
+        <button id="btn-ad-onclicka" class="bg-gray-200 text-black font-black px-3 py-2 rounded-xl text-[10px] font-mono tracking-wider w-20 text-center shadow-md active:scale-95" onclick="triggerTaskAd(event, 'onclicka', 'box', 1)">WATCH</button>
+      </div>
+
+      <div class="jungle-panel rounded-2xl p-3 flex items-center justify-between border-emerald-500/20">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-white/10 p-1 flex items-center justify-center shadow-inner">
+            <img src="https://i.ibb.co/wr6ykwhw/images-1-removebg-preview-1.png" class="w-full h-full object-contain scale-110" alt="Ads3">
+          </div>
+          <div>
+            <h4 class="font-bold text-xs">Ads3 Network</h4>
+            <p class="text-[11px] text-jungle-neon font-mono font-bold">Reward: +1 Box 🎁</p>
+          </div>
+        </div>
+        <button id="btn-ad-ads3" class="bg-gray-200 text-black font-black px-3 py-2 rounded-xl text-[10px] font-mono tracking-wider w-20 text-center shadow-md active:scale-95" onclick="triggerTaskAd(event, 'ads3', 'box', 1)">WATCH</button>
+      </div>
+
+      <div id="dynamic-tasks-container" class="flex flex-col gap-2.5 mt-2 border-t border-gray-700 pt-2">
+      </div>
+    </div>
+  </main>
+
+  <main id="tab-game" class="tab-screen flex-1 flex-col gap-3 my-auto z-10 w-full max-w-md mx-auto py-2">
+    <div class="text-center mb-1">
+      <h2 class="text-xl font-extrabold text-jungle-amber font-mono">DRAGON ARENA</h2>
+      <p class="text-xs text-gray-400">Play jackpot mini-games to win big multipliers</p>
+    </div>
+
+    <div class="grid grid-cols-2 gap-2.5">
+      <div class="jungle-panel rounded-2xl p-4 flex flex-col items-center text-center gap-2 border-jungle-amber/40 relative">
+        <span class="text-4xl animate-spin-slow" style="animation: spin 8s linear infinite;">🎡</span>
+        <h3 class="font-extrabold text-xs">Spin & Win</h3>
+        <p class="text-[10px] text-gray-400 h-6">Tickets: <span id="main-spin-tickets" class="text-jungle-amber font-bold">0</span></p>
+        <button id="main-btn-spin" class="w-full btn-ad-claim text-black font-black py-2.5 rounded-xl text-xs font-mono tracking-wider mt-1" onclick="openGameModal('spin')">PLAY</button>
+      </div>
+
+      <div class="jungle-panel rounded-2xl p-4 flex flex-col items-center text-center gap-2 border-jungle-neon/40 relative">
+        <span class="text-4xl animate-pulse">🎁</span>
+        <h3 class="font-extrabold text-xs">Lucky Box</h3>
+        <p class="text-[10px] text-gray-400 h-6">Tickets: <span id="main-box-tickets" class="text-jungle-neon font-bold">0</span></p>
+        <button id="main-btn-box" class="w-full btn-claim text-black font-black py-2.5 rounded-xl text-xs font-mono tracking-wider mt-1" onclick="openGameModal('box')">PLAY</button>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <div id="dynamic-games-container" class="grid grid-cols-2 gap-2.5"></div>
+    </div>
+  </main>
+
+  <main id="tab-leaderboard" class="tab-screen flex-1 flex-col gap-3 my-auto z-10 w-full max-w-md mx-auto py-2">
+    <div class="text-center mb-1">
+      <h2 class="text-xl font-extrabold text-jungle-neon font-mono">GLOBAL RANKS</h2>
+      <p class="text-xs text-gray-400">Top 20 Dragon Masters</p>
+      <div class="text-[10px] text-jungle-amber font-mono mt-1 bg-black/40 inline-block px-3 py-0.5 rounded-full border border-jungle-amber/30">
+        Resets in: <span id="lb-timer" class="font-bold">00:00:00</span>
+      </div>
+    </div>
+    
+    <div class="flex flex-col gap-3 h-[60vh] overflow-y-auto custom-scrollbar pr-1 pb-24">
+      <div class="grid grid-cols-3 gap-2 items-end pt-4 pb-2">
+        <div class="jungle-panel rounded-xl p-2.5 flex flex-col items-center gap-1 border-t-2 border-slate-300 shadow-md">
+          <div class="w-8 h-8 rounded-full bg-slate-400/20 text-slate-300 font-bold flex items-center justify-center text-sm border border-slate-400">2</div>
+          <span class="font-bold text-xs truncate" id="lb-rank2-name">---</span>
+          <span class="font-mono text-[10px] text-jungle-neon font-bold" id="lb-rank2-gold">0 🪙</span>
+        </div>
+        <div class="jungle-panel bg-gradient-to-b from-amber-500/20 to-black/60 rounded-xl p-3 flex flex-col items-center gap-1 pb-5 -mt-4 border-t-4 border-jungle-gold shadow-[0_0_20px_rgba(245,158,11,0.3)] z-10">
+          <span class="text-2xl drop-shadow-md">👑</span>
+          <div class="w-9 h-9 rounded-full bg-amber-500/30 text-jungle-gold font-black flex items-center justify-center text-lg border-2 border-jungle-gold shadow-inner">1</div>
+          <span class="font-black text-sm text-white truncate mt-1" id="lb-rank1-name">---</span>
+          <span class="font-mono text-xs text-amber-400 font-black drop-shadow-md" id="lb-rank1-gold">0 🪙</span>
+        </div>
+        <div class="jungle-panel rounded-xl p-2.5 flex flex-col items-center gap-1 border-t-2 border-amber-700 shadow-md">
+          <div class="w-8 h-8 rounded-full bg-amber-700/20 text-amber-500 font-bold flex items-center justify-center text-sm border border-amber-600">3</div>
+          <span class="font-bold text-xs truncate" id="lb-rank3-name">---</span>
+          <span class="font-mono text-[10px] text-jungle-neon font-bold" id="lb-rank3-gold">0 🪙</span>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-2 mt-2" id="leaderboard-remaining">
+        <div class="text-center text-xs text-gray-400 py-4">Loading real ranks...</div>
+      </div>
+    </div>
+
+    <div class="bg-emerald-950/80 border-2 border-jungle-neon rounded-2xl p-3 flex items-center justify-between shadow-lg mt-2">
+      <div class="flex items-center gap-3">
+        <span class="font-mono font-bold text-xs text-jungle-neon" id="lb-my-rank-badge">#99+</span>
+        <div><span id="lb-user-name" class="font-extrabold text-xs text-white">You</span><span class="text-[9px] text-jungle-neon block font-mono">Keep tapping to climb!</span></div>
+      </div>
+      <span class="font-mono font-black text-xs text-jungle-amber" id="leaderboard-my-gold">0 🪙</span>
+    </div>
+  </main>
+
+  <main id="tab-wallet" class="tab-screen flex-1 flex-col gap-4 my-auto z-10 w-full max-w-md mx-auto py-2">
+    <div class="jungle-panel rounded-2xl p-5 flex flex-col items-center text-center gap-2 relative border-jungle-neon/30">
+      <div class="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-400/30 flex items-center justify-center text-3xl shadow-inner mb-1">💳</div>
+      <span class="text-[10px] font-mono uppercase text-gray-400 tracking-wider">AVAILABLE VAULT BALANCE</span>
+      <h2 class="text-3xl font-black text-jungle-amber font-mono" id="wallet-balance-text">0</h2>
+      <div class="text-xs text-jungle-neon font-mono bg-jungle-neon/10 px-3.5 py-1 rounded-full border border-jungle-neon/30">
+        Estimated Value: ≈ <strong id="wallet-inr-val" class="text-white">₹0.00</strong> <br>
+        <span class="text-[9px] text-gray-400">(100K 🪙 = ₹100 | 100K 🪙 = 0.74 TON)</span>
+      </div>
+      <div class="w-full grid grid-cols-2 gap-2 mt-4">
+        <button class="bg-gradient-to-r from-amber-400 to-amber-500 text-black font-black py-3 rounded-xl text-xs font-mono active:scale-95 shadow-lg tracking-wider" onclick="openWithdrawModal('UPI')">WITHDRAW UPI</button>
+        <button class="bg-gradient-to-r from-jungle-neon to-emerald-400 text-black font-black py-3 rounded-xl text-xs font-mono active:scale-95 shadow-lg tracking-wider" onclick="openWithdrawModal('TON')">WITHDRAW TON</button>
+      </div>
+    </div>
+
+    <div class="w-full mt-2 h-24 rounded-xl bg-black/40 border border-dashed border-jungle-neon/50 flex flex-col items-center justify-center text-[10px] text-gray-500 font-mono">
+      <span class="text-lg">📢</span>
+      <span>[Native Ad Space - RichAds/Gigapub]</span>
+    </div>
+  </main>
+
+  <footer class="z-30 max-w-md mx-auto w-full mt-2">
+    <nav class="jungle-panel rounded-2xl p-1.5 grid grid-cols-5 gap-1 text-center font-bold text-xs border border-jungle-neon/30">
+      <button class="nav-item active flex flex-col items-center py-1 text-jungle-neon active:scale-90 transition-all" onclick="switchNavTab('home', this)">
+        <span class="text-base">🏠</span><span class="text-[9px] font-mono">Home</span>
+      </button>
+      <button class="nav-item flex flex-col items-center py-1 text-gray-400 hover:text-gray-200 active:scale-90 transition-all" onclick="switchNavTab('task', this)">
+        <span class="text-base">📋</span><span class="text-[9px] font-mono">Tasks</span>
+      </button>
+      <button class="nav-item flex flex-col items-center py-1 text-gray-400 hover:text-gray-200 active:scale-90 transition-all" onclick="switchNavTab('game', this)">
+        <span class="text-base">🎮</span><span class="text-[9px] font-mono">Game</span>
+      </button>
+      <button class="nav-item flex flex-col items-center py-1 text-gray-400 hover:text-gray-200 active:scale-90 transition-all" onclick="switchNavTab('leaderboard', this)">
+        <span class="text-base">🏆</span><span class="text-[9px] font-mono">Ranks</span>
+      </button>
+      <button class="nav-item flex flex-col items-center py-1 text-gray-400 hover:text-gray-200 active:scale-90 transition-all" onclick="switchNavTab('wallet', this)">
+        <span class="text-base">💳</span><span class="text-[9px] font-mono">Wallet</span>
+      </button>
+    </nav>
+  </footer>
+
+  <div id="referral-modal" class="fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="upgrade-card rounded-3xl p-6 w-full max-w-sm flex flex-col items-center gap-4 relative popup-animate-in">
+      <button class="absolute top-3 right-4 text-gray-400 hover:text-white text-xl" onclick="closeModal('referral-modal')">✕</button>
+      <div class="w-16 h-16 rounded-2xl bg-emerald-500/20 flex items-center justify-center text-4xl shadow-inner mt-2">👥</div>
+      <h3 class="text-xl font-black text-white font-mono uppercase text-center">Refer & Earn</h3>
+      <div class="w-full bg-black/50 p-3 rounded-xl border border-jungle-neon/30 text-left">
+        <p class="text-[11px] text-gray-300 font-mono mb-1">🎁 <span class="text-jungle-amber font-bold">1,000 🪙</span> Instant Bonus on join.</p>
+        <p class="text-[11px] text-gray-300 font-mono mb-1">🎁 <span class="text-jungle-amber font-bold">4,000 🪙</span> Extra when friend completes:</p>
+        <ul class="text-[10px] text-gray-400 list-disc ml-4 space-y-1">
+          <li>5 Quests & 5 Sponsored Ads</li>
+          <li>Minimum 10 Mins of Playtime</li>
+        </ul>
+      </div>
+      <div class="flex gap-2 w-full mt-1">
+        <button class="flex-1 btn-claim text-black font-black py-3 rounded-xl text-xs font-mono shadow-lg" onclick="copyReferralLink()">COPY LINK 🔗</button>
+        <button class="flex-1 bg-gray-800 border border-gray-600 text-white font-black py-3 rounded-xl text-xs font-mono shadow-lg active:scale-95" onclick="openReferralTrackModal()">TRACK 📊</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="referral-track-modal" class="fixed inset-0 z-[220] bg-black/95 backdrop-blur-md hidden items-center justify-center p-3">
+    <div class="upgrade-card rounded-3xl p-5 w-full max-w-md flex flex-col gap-3 relative popup-animate-in border-jungle-neon/60 max-h-[85vh]">
+      <button class="absolute top-3 right-4 text-gray-400 hover:text-white text-xl font-bold" onclick="closeModal('referral-track-modal')">✕</button>
+      
+      <div class="flex items-center gap-2 border-b border-gray-800 pb-2">
+        <span class="text-2xl">📊</span>
+        <div>
+          <h3 class="text-base font-black text-jungle-neon font-mono uppercase">Referral Dashboard</h3>
+          <p class="text-[10px] text-gray-400">Track friends progress & claim rewards</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2 bg-black/50 p-2.5 rounded-xl border border-jungle-neon/30 text-center font-mono">
+        <div>
+          <div class="text-[9px] text-gray-400">INVITED</div>
+          <div class="text-sm font-black text-white" id="ref-stat-count">0 Friends</div>
+        </div>
+        <div>
+          <div class="text-[9px] text-gray-400">EARNED</div>
+          <div class="text-sm font-black text-jungle-gold" id="ref-stat-earned">0 🪙</div>
+        </div>
+        <div>
+          <div class="text-[9px] text-gray-400">PENDING</div>
+          <div class="text-sm font-black text-jungle-neon" id="ref-stat-pending">0 🪙</div>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-2 overflow-y-auto max-h-[50vh] custom-scrollbar pr-1" id="referrals-friend-list">
+        <div class="text-center py-6 text-gray-500 font-mono text-xs">
+          <span class="text-3xl block mb-2">📭</span>
+          You haven't invited any friends yet.<br>Share your link to start earning!
+        </div>
+      </div>
+
+      <button class="w-full bg-gray-800 hover:bg-gray-700 text-white font-mono font-bold text-xs py-2.5 rounded-xl border border-gray-700 mt-1" onclick="closeModal('referral-track-modal')">
+        CLOSE DASHBOARD
+      </button>
+    </div>
+  </div>
+
+  <div id="withdraw-modal" class="fixed inset-0 z-[250] bg-black/90 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="upgrade-card rounded-3xl p-6 w-full max-w-sm flex flex-col items-center gap-3 relative popup-animate-in">
+      <button class="absolute top-3 right-4 text-gray-400 text-xl" onclick="closeModal('withdraw-modal')">✕</button>
+      <div id="withdraw-icon" class="text-4xl mb-1 mt-2">🏦</div>
+      <h3 class="text-lg font-black text-jungle-amber font-mono" id="withdraw-title">WITHDRAW</h3>
+      <p class="text-[10px] text-gray-400 font-mono text-center mb-2">Minimum 100,000 🪙 required</p>
+      <div class="w-full text-left">
+        <label class="text-[10px] text-jungle-neon font-mono mb-1 block" id="withdraw-address-label">Address</label>
+        <input type="text" id="withdraw-address-input" class="withdraw-input" placeholder="e.g. 9003056016@ybl">
+        <label class="text-[10px] text-jungle-amber font-mono mt-2 mb-1 block">Coins to Withdraw</label>
+        <input type="number" id="withdraw-amount-input" class="withdraw-input" placeholder="e.g. 100000" oninput="calculateWithdrawValue()">
+        <p class="text-[10px] text-gray-400 text-right mt-1" id="withdraw-calc-text">Value: --</p>
+        <p class="text-[10px] text-red-500 font-bold text-center mt-1 hidden" id="withdraw-error-text"></p>
+      </div>
+      <button class="w-full btn-ad-claim text-black font-black py-3 rounded-2xl text-sm font-mono mt-2" onclick="submitWithdrawal()">SUBMIT REQUEST</button>
+    </div>
+  </div>
+
+  <div id="modal-spin" class="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="upgrade-card rounded-3xl p-5 w-full max-w-xs flex flex-col items-center gap-4 relative popup-animate-in">
+      <button class="absolute top-3 right-4 text-gray-400" onclick="closeModal('modal-spin')">✕</button>
+      <h3 class="text-lg font-black text-jungle-amber font-mono uppercase mt-2">Fortune Wheel</h3>
+      <div class="relative mt-2 mb-2"><div class="wheel-pointer">🔻</div>
+        <div id="the-spin-wheel" class="wheel-container">
+          <div class="wheel-label" style="transform: rotate(30deg); top:0;">5000<br>🪙</div><div class="wheel-label" style="transform: rotate(90deg); top:0;">OOPS<br>😢</div>
+          <div class="wheel-label" style="transform: rotate(150deg); top:0;">800<br>🪙</div><div class="wheel-label" style="transform: rotate(210deg); top:0;">100<br>🪙</div>
+          <div class="wheel-label" style="transform: rotate(270deg); top:0;">1200<br>🪙</div><div class="wheel-label" style="transform: rotate(330deg); top:0;">1500<br>🪙</div>
+        </div>
+      </div>
+      <div class="w-full bg-black/40 p-2 rounded-xl flex justify-between text-xs font-mono"><span>Tickets:</span><span id="spin-modal-tickets" class="font-bold text-jungle-amber">0</span></div>
+      <button id="action-btn-spin" class="w-full btn-ad-claim text-black font-black py-3.5 rounded-2xl text-sm font-mono" onclick="triggerSpinWheel(event)"><span id="spin-btn-label">PLAY</span></button>
+    </div>
+  </div>
+
+  <div id="modal-box" class="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="upgrade-card rounded-3xl p-5 w-full max-w-sm flex flex-col items-center gap-4 relative popup-animate-in">
+      <button class="absolute top-3 right-4 text-gray-400" onclick="closeModal('modal-box')">✕</button>
+      <h3 class="text-lg font-black text-jungle-neon font-mono uppercase mt-2">Lucky Box</h3>
+      <div class="lucky-reel-wrapper">
+        <div id="lucky-box-reel" class="lucky-reel-content" style="transform: translateX(0px);"></div>
+        <div class="reel-center-mark"></div>
+      </div>
+      <div class="w-full bg-black/40 p-2 rounded-xl flex justify-between text-xs font-mono mt-2"><span>Tickets:</span><span id="box-modal-tickets" class="font-bold text-jungle-neon">0</span></div>
+      <button id="action-btn-box" class="w-full btn-claim text-black font-black py-3.5 rounded-2xl text-sm font-mono" onclick="triggerLuckyBox(event)"><span id="box-btn-label">PLAY</span></button>
+    </div>
+  </div>
+
+  <div id="modal-iframe-game" class="fixed inset-0 z-[200] bg-black/95 backdrop-blur-md hidden flex-col items-center justify-center p-2 popup-animate-in">
+    <div class="w-full w-[95vw] max-w-lg flex justify-end mb-2"><button class="text-white bg-red-500/80 px-4 py-1.5 rounded-full font-bold text-sm" onclick="closeModal('modal-iframe-game')">CLOSE ✕</button></div>
+    <div class="w-[95vw] max-w-lg h-[85vh] bg-black border-2 border-jungle-neon rounded-2xl overflow-hidden"><iframe id="dynamic-game-frame" src="" class="w-full h-full border-none"></iframe></div>
+  </div>
+
+  <div id="daily-modal" class="fixed inset-0 z-[150] bg-black/90 backdrop-blur-md hidden items-center justify-center p-4">
+    <div class="jungle-panel rounded-3xl p-6 w-full max-w-xs flex flex-col gap-4 border-2 border-jungle-amber shadow-[0_0_35px_rgba(245,158,11,0.4)] relative popup-animate-in">
+      <button class="absolute top-3 right-3 text-gray-400 text-lg" onclick="closeModal('daily-modal')">✕</button>
+      <div class="text-center"><span class="text-4xl">🎁</span><h3 class="text-lg font-extrabold text-jungle-amber mt-2 uppercase">Daily Streak</h3></div>
+      <div class="grid grid-cols-4 gap-1.5 my-1" id="daily-grid-container"></div>
+      <button id="daily-claim-btn" class="w-full bg-jungle-surface border border-jungle-neon/40 text-jungle-neon font-bold py-3 rounded-2xl text-xs" onclick="claimDailyReward(event)">CLAIM (<span id="daily-normal-btn-val">100 🪙</span>)</button>
+    </div>
+  </div>
+
+  <div id="game-alert-modal" class="fixed inset-0 z-[300] bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="upgrade-card rounded-3xl p-6 w-full max-w-xs flex flex-col items-center text-center gap-3 relative popup-animate-in">
+      <div id="alert-icon" class="text-5xl mb-1">⚡</div>
+      <h3 id="alert-title" class="text-lg font-black text-jungle-neon font-mono">Title</h3>
+      <p id="alert-message" class="text-sm text-gray-300 mb-2">Message</p>
+      <button id="alert-close-btn" class="w-full btn-claim text-black font-black py-3 rounded-xl text-xs font-mono" onclick="closeGameAlert()">OKAY</button>
+    </div>
+  </div>
+
+  <div id="boost-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md hidden items-center justify-center p-4">
+    <div class="upgrade-card rounded-3xl p-5 w-full max-w-xs flex flex-col gap-3.5 border-jungle-neon/50 shadow-2xl relative popup-animate-in">
+      <button class="absolute top-3 right-3 text-gray-400 hover:text-white text-lg font-bold" onclick="closeModal('boost-modal')">✕</button>
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-jungle-neon/15 border border-jungle-neon/40 flex items-center justify-center text-2xl shadow-inner">🚀</div>
+        <div><h3 class="text-base font-extrabold text-jungle-neon font-mono">TAP FORGE</h3><p class="text-[10px] text-gray-300 font-mono">Level <span id="boost-level-text" class="text-jungle-neon font-bold">1</span> Power</p></div>
+      </div>
+      <div class="bg-black/40 p-3 rounded-2xl border border-jungle-neon/20 flex justify-between items-center text-xs font-mono"><span class="text-gray-400">Current Power:</span><span class="font-extrabold text-jungle-neon text-sm" id="modal-tap-power">+1 / Tap</span></div>
+      <button class="w-full bg-gradient-to-r from-amber-400 via-jungle-amber to-amber-500 text-black font-black py-3 rounded-2xl text-xs active:scale-95 shadow-lg flex items-center justify-between px-4 font-mono" onclick="buyTapBoostWithCoins(event)">
+        <span id="boost-upgrade-title">UPGRADE (+1/TAP)</span><span class="bg-black/25 px-2.5 py-0.5 rounded-full text-white" id="boost-cost-badge">1,000 🪙</span>
+      </button>
+    </div>
+  </div>
+  
+  <div id="energy-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md hidden items-center justify-center p-4">
+    <div class="upgrade-card rounded-3xl p-5 w-full max-w-xs flex flex-col gap-3.5 border-jungle-amber/50 shadow-2xl relative popup-animate-in">
+      <button class="absolute top-3 right-3 text-gray-400 hover:text-white text-lg font-bold" onclick="closeModal('energy-modal')">✕</button>
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-amber-500/15 border border-amber-400/40 flex items-center justify-center text-2xl shadow-inner">🔋</div>
+        <div><h3 class="text-base font-extrabold text-jungle-amber font-mono">MANA TANK</h3><p class="text-[10px] text-gray-300 font-mono">Tier <span id="energy-level-text" class="text-jungle-amber font-bold">1</span> Capacity</p></div>
+      </div>
+      <div class="bg-black/40 p-3 rounded-2xl border border-jungle-amber/20 flex justify-between items-center text-xs font-mono"><span class="text-gray-400">Current Storage:</span><span class="font-extrabold text-jungle-amber text-sm" id="modal-energy-status">1000 / 1000</span></div>
+      <button class="w-full bg-amber-500 text-black font-black py-3 rounded-2xl text-xs active:scale-95 shadow-md flex items-center justify-between px-4 font-mono" onclick="upgradeMaxEnergyWithCoins(event)">
+        <span id="energy-upgrade-title">+500 CAPACITY</span><span class="bg-black/25 px-2.5 py-0.5 rounded-full text-white" id="energy-cost-badge">1,000 🪙</span>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // 🛠️ TERA FIREBASE CONFIG
+    const firebaseConfig = {
+      apiKey: "AIzaSyB0rU66g1GZfgxgLXnwArXwRFRmPg_Vnno",
+      authDomain: "dragoearn.firebaseapp.com",
+      projectId: "dragoearn",
+      storageBucket: "dragoearn.firebasestorage.app",
+      messagingSenderId: "16790312883",
+      appId: "1:16790312883:web:51893b17b34394d240ddc6"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      try {
+        tg.ready();
+        tg.expand();
+        if (tg.enableClosingConfirmation) tg.enableClosingConfirmation();
+      } catch (e) { console.log("TG WebApp Error:", e); }
+    }
+
+    function initTelegramUser() {
+      if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+        const u = tg.initDataUnsafe.user;
+        const nameEl = document.getElementById('tg-user-name');
+        const handleEl = document.getElementById('tg-user-handle');
+        
+        if (nameEl) {
+          const fullName = (u.first_name || '') + (u.last_name ? ' ' + u.last_name : '');
+          nameEl.textContent = fullName.trim().toUpperCase() || 'JUNGLE EXPLORER';
+        }
+        if (handleEl) {
+          handleEl.textContent = u.username || u.first_name || 'player';
+        }
+      }
+    }
+
+    const boostCosts = [1000, 3000, 6000, 10000, 15000, 25000, 40000];
+    const energyCosts = [1000, 3000, 6000, 10000, 15000, 25000, 40000];
+    const dailyRewards = [100, 150, 250, 400, 600, 850, 1500];
+
+    let gold = parseInt(localStorage.getItem('draco_gold')) || 0;
+    let boostLevel = parseInt(localStorage.getItem('draco_boost_lvl')) || 1;
+    let energyLevel = parseInt(localStorage.getItem('draco_energy_lvl')) || 1;
+    let maxEnergy = 1000 + (energyLevel - 1) * 500;
+    let energy = parseInt(localStorage.getItem('draco_energy'));
+    if (isNaN(energy)) energy = maxEnergy;
+
+    let soundEnabled = localStorage.getItem('draco_sound') !== 'false';
+    let currentStreakDay = parseInt(localStorage.getItem('draco_streak_day')) || 1;
+    let lastClaimDate = localStorage.getItem('draco_last_claim_date') || '';
+    
+    let playHistoryCount = parseInt(localStorage.getItem('draco_play_count')) || 0;
+    let spinTickets = parseInt(localStorage.getItem('draco_spin_tkts')) || 0;
+    let boxTickets = parseInt(localStorage.getItem('draco_box_tkts')) || 0; 
+    let isDailyClaiming = false;
+    
+    let spinRot = 0, isSpinning = false, isBoxRolling = false, currentWithdrawMethod = '';
+
+    // 🔥 OPTIMIZED FIREBASE SYNC
+    let lastSyncedGold = gold;
+    function syncToDatabase() {
+      if (gold === lastSyncedGold) return; 
+      let tgUserId = tg?.initDataUnsafe?.user?.id || 'guest_user';
+      if (db) {
+        db.collection('users').doc(String(tgUserId)).set({
+          user_id: tgUserId,
+          username: tg?.initDataUnsafe?.user?.username || 'player',
+          gold: gold,
+          boostLevel: boostLevel,
+          energyLevel: energyLevel,
+          last_active: new Date().toISOString()
+        }, { merge: true });
+      }
+      lastSyncedGold = gold;
+      console.log("Firebase Sync Executed for User:", tgUserId);
+    }
+    setInterval(syncToDatabase, 180000); 
+    window.addEventListener('visibilitychange', () => { if (document.hidden) syncToDatabase(); });
+
+    // 🏆 REAL-TIME FIREBASE LEADERBOARD FETCHING 
+    async function loadLeaderboardFromFirebase() {
+      const remainingEl = document.getElementById('leaderboard-remaining');
+      const rank1Name = document.getElementById('lb-rank1-name');
+      const rank1Gold = document.getElementById('lb-rank1-gold');
+      const rank2Name = document.getElementById('lb-rank2-name');
+      const rank2Gold = document.getElementById('lb-rank2-gold');
+      const rank3Name = document.getElementById('lb-rank3-name');
+      const rank3Gold = document.getElementById('lb-rank3-gold');
+
+      if (!db) return;
+
+      try {
+        const snap = await db.collection('users').orderBy('gold', 'desc').limit(20).get();
+        if (snap.empty) {
+          if (remainingEl) remainingEl.innerHTML = `<div class="text-center text-xs text-gray-400 py-4">No players registered yet!</div>`;
+          return;
+        }
+
+        let users = [];
+        snap.forEach(doc => users.push(doc.data()));
+
+        if (users[0]) {
+          if (rank1Name) rank1Name.textContent = users[0].username || 'Master';
+          if (rank1Gold) rank1Gold.textContent = (users[0].gold || 0).toLocaleString() + ' 🪙';
+        }
+        if (users[1]) {
+          if (rank2Name) rank2Name.textContent = users[1].username || 'Explorer';
+          if (rank2Gold) rank2Gold.textContent = (users[1].gold || 0).toLocaleString() + ' 🪙';
+        }
+        if (users[2]) {
+          if (rank3Name) rank3Name.textContent = users[2].username || 'Explorer';
+          if (rank3Gold) rank3Gold.textContent = (users[2].gold || 0).toLocaleString() + ' 🪙';
+        }
+
+        if (remainingEl) {
+          remainingEl.innerHTML = '';
+          if (users.length <= 3) {
+            remainingEl.innerHTML = `<div class="text-center text-[10px] text-gray-500 py-2">More players will appear as they join!</div>`;
+          } else {
+            for (let i = 3; i < 20; i++) {
+              if (users[i]) {
+                const u = users[i];
+                remainingEl.innerHTML += `
+                  <div class="jungle-panel rounded-xl p-3 flex items-center justify-between border border-jungle-neon/20 hover:bg-emerald-900/30 transition-colors">
+                    <div class="flex items-center gap-4">
+                      <div class="w-7 h-7 rounded-full bg-jungle-surface border border-gray-600 text-gray-300 font-bold flex items-center justify-center text-xs shadow-inner">${i + 1}</div>
+                      <span class="font-bold text-sm text-gray-200">${u.username || 'Explorer'}</span>
+                    </div>
+                    <span class="font-mono text-xs text-jungle-neon font-bold">${(u.gold || 0).toLocaleString()} 🪙</span>
+                  </div>
+                `;
+              } else {
+                 remainingEl.innerHTML += `
+                  <div class="jungle-panel rounded-xl p-3 flex items-center justify-between border border-jungle-neon/20 opacity-40">
+                    <div class="flex items-center gap-4">
+                      <div class="w-7 h-7 rounded-full bg-jungle-surface border border-gray-600 text-gray-500 font-bold flex items-center justify-center text-xs shadow-inner">${i + 1}</div>
+                      <span class="font-bold text-sm text-gray-500">---</span>
+                    </div>
+                    <span class="font-mono text-xs text-gray-500 font-bold">0 🪙</span>
+                  </div>
+                `;
+              }
+            }
+          }
+        }
+
+        let myTgId = String(tg?.initDataUnsafe?.user?.id || 'guest_user');
+        let myName = tg?.initDataUnsafe?.user?.username || tg?.initDataUnsafe?.user?.first_name || 'player';
+        
+        let myRankBadge = document.getElementById('lb-my-rank-badge');
+        let myRankText = document.getElementById('lb-user-name');
+        let myGoldText = document.getElementById('leaderboard-my-gold');
+
+        if (myRankText) myRankText.textContent = myName === 'player' ? 'You' : myName;
+        if (myGoldText) myGoldText.textContent = gold.toLocaleString() + ' 🪙';
+
+        if (myRankBadge) {
+          let index = users.findIndex(u => String(u.user_id) === myTgId || u.username === myName);
+          if (index !== -1) {
+            myRankBadge.textContent = `#${index + 1}`;
+          } else {
+            myRankBadge.textContent = `#99+`;
+          }
+        }
+
+      } catch (err) {
+        console.log("Error loading real leaderboard:", err);
+      }
+    }
+
+    document.getElementById('lucky-box-reel').innerHTML = `<span class="reel-item">💎</span><span class="reel-item">🎁</span><span class="reel-item">⚡</span>`;
+
+    function showGameAlert(t, m, i, hideBtn=false) { 
+      document.getElementById('alert-title').textContent = t; 
+      document.getElementById('alert-message').textContent = m; 
+      
+      const iconEl = document.getElementById('alert-icon');
+      if(i === '⏳') {
+        iconEl.innerHTML = `<span class="inline-block animate-spin-fast text-4xl">⏳</span>`;
+      } else {
+        iconEl.innerHTML = i;
+      }
+      
+      const btn = document.getElementById('alert-close-btn');
+      if(hideBtn) { btn.classList.add('hidden'); } else { btn.classList.remove('hidden'); }
+      
+      document.getElementById('game-alert-modal').classList.remove('hidden'); 
+      document.getElementById('game-alert-modal').classList.add('flex'); 
+    }
+    function closeGameAlert() { document.getElementById('game-alert-modal').classList.add('hidden'); document.getElementById('game-alert-modal').classList.remove('flex'); }
+    
+    function openReferralModal() { document.getElementById('referral-modal').classList.remove('hidden'); document.getElementById('referral-modal').classList.add('flex'); }
+    
+    function openReferralTrackModal() {
+      closeModal('referral-modal');
+      document.getElementById('referral-track-modal').classList.remove('hidden');
+      document.getElementById('referral-track-modal').classList.add('flex');
+    }
+
+    function claimRefReward(btnElement, friendUsername, amount, isJoinBonus = false) {
+      gold += amount;
+      
+      let earnedEl = document.getElementById('ref-stat-earned');
+      let pendingEl = document.getElementById('ref-stat-pending');
+      
+      let curEarned = parseInt(earnedEl.innerText.replace(/,/g, '')) || 0;
+      let curPending = parseInt(pendingEl.innerText.replace(/,/g, '')) || 0;
+      
+      earnedEl.innerText = (curEarned + amount).toLocaleString() + ' 🪙';
+      if (!isJoinBonus && curPending >= amount) {
+          pendingEl.innerText = (curPending - amount).toLocaleString() + ' 🪙';
+      }
+
+      updateUI();
+      triggerCasinoClaimAnimation(window.innerWidth / 2, window.innerHeight / 2, amount);
+      
+      btnElement.disabled = true;
+      btnElement.innerText = "CLAIMED ✅";
+      btnElement.className = "bg-emerald-950 text-emerald-400 font-bold px-2 py-1 rounded-md text-[9px] font-mono border border-emerald-500/40 cursor-not-allowed";
+      
+      showGameAlert('BONUS CLAIMED!', `+${amount.toLocaleString()} 🪙 added from ${friendUsername}!`, '🎉');
+      syncToDatabase();
+    }
+
+    function copyReferralLink() { 
+      let myId = tg?.initDataUnsafe?.user?.id || Math.floor(Math.random()*999999);
+      const link = "https://t.me/JungleDracoBot?start=ref_" + myId;
+      showGameAlert('LINK COPIED', 'Invitation link copied!\n(' + link + ')', '🔗'); 
+      closeModal('referral-modal'); 
+    }
+    
+    function openIframeGame(url) { document.getElementById('dynamic-game-frame').src = url; document.getElementById('modal-iframe-game').classList.remove('hidden'); document.getElementById('modal-iframe-game').classList.add('flex'); }
+
+    function openWithdrawModal(method) {
+      currentWithdrawMethod = method; document.getElementById('withdraw-title').textContent = `WITHDRAW ${method}`;
+      document.getElementById('withdraw-icon').textContent = method === 'UPI' ? '🏦' : '💎';
+      document.getElementById('withdraw-address-input').placeholder = method === 'UPI' ? 'e.g. 9003056016@ybl' : 'EQ...';
+      document.getElementById('withdraw-modal').classList.remove('hidden'); document.getElementById('withdraw-modal').classList.add('flex');
+    }
+    
+    function calculateWithdrawValue() {
+      const amt = parseInt(document.getElementById('withdraw-amount-input').value) || 0;
+      const calc = document.getElementById('withdraw-calc-text');
+      if (amt < 100000) { calc.textContent = 'Min 100,000 🪙'; return; }
+      calc.textContent = currentWithdrawMethod === 'UPI' ? `Value: ₹${(amt/1000).toFixed(2)}` : `Value: ${(amt/100000 * 0.74).toFixed(2)} TON`;
+    }
+    
+    function submitWithdrawal() {
+      const addr = document.getElementById('withdraw-address-input').value; 
+      const amt = parseInt(document.getElementById('withdraw-amount-input').value) || 0;
+      const err = document.getElementById('withdraw-error-text');
+      err.classList.add('hidden'); 
+
+      if (!addr) { err.textContent = 'Please enter an address or ID'; err.classList.remove('hidden'); return; }
+      if (amt < 100000) { err.textContent = 'Min withdrawal is 100K 🪙'; err.classList.remove('hidden'); return; }
+      if (gold < amt) { err.textContent = 'Insufficient Balance!'; err.classList.remove('hidden'); return; }
+      
+      gold -= amt; 
+      updateUI(); 
+      closeModal('withdraw-modal'); 
+      syncToDatabase();
+      showGameAlert('SUCCESS', `Coins Deducted! ${amt} 🪙 payment will arrive in 24-48 hours.`, '✅');
+    }
+
+    let audioCtx = null;
+    function initAudio() { if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if(audioCtx.state === 'suspended') audioCtx.resume(); }
+    function playCrispCoinSFX() { if(!soundEnabled || !audioCtx) return; try { const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'triangle'; osc.frequency.setValueAtTime(600, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1); gain.gain.setValueAtTime(0.3, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.1); } catch(e){} }
+    function toggleSound() { soundEnabled = !soundEnabled; localStorage.setItem('draco_sound', soundEnabled); document.getElementById('sound-icon').textContent = soundEnabled ? '🔊' : '🔇'; }
+    
+    function triggerCasinoClaimAnimation(x, y, a) {
+      const tgt = document.getElementById('gold-balance-card').getBoundingClientRect(); const ex = tgt.left+tgt.width/2, ey = tgt.top+tgt.height/2;
+      for (let i=0; i<10; i++) {
+        const c = document.createElement('div'); c.className = 'flying-coin'; c.innerText = '🪙';
+        c.style.left = `${x}px`; c.style.top = `${y}px`; c.style.transform = `translate(${(Math.random()-.5)*100}px, ${(Math.random()-.5)*100}px) scale(0.8)`;
+        document.body.appendChild(c);
+        setTimeout(() => { c.style.transform = `translate(${ex-x}px, ${ey-y}px) scale(0.3)`; c.style.opacity = '0'; }, 100+i*30);
+        setTimeout(() => c.remove(), 1000+i*30);
+      }
+      setTimeout(() => { document.getElementById('gold-balance-card').style.transform = 'scale(1.1)'; setTimeout(()=>document.getElementById('gold-balance-card').style.transform = 'scale(1)', 200); playCrispCoinSFX(); }, 600);
+    }
+
+    function handleTap(e) {
+      initAudio(); if (energy < boostLevel) return;
+      energy -= boostLevel; gold += boostLevel; updateUI(); playCrispCoinSFX();
+      if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+      const d = document.getElementById('dragon-wrapper'); d.style.transform = 'scale(0.95)'; setTimeout(() => d.style.transform = 'scale(1)', 100);
+      const el = document.createElement('div'); el.className = 'tap-particle text-jungle-amber drop-shadow-md text-2xl'; el.innerHTML = `+${boostLevel} 🪙`;
+      el.style.left = `${e.clientX}px`; el.style.top = `${e.clientY}px`; document.body.appendChild(el); setTimeout(() => el.remove(), 700);
+    }
+
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); if(id==='modal-iframe-game') document.getElementById('dynamic-game-frame').src = ''; }
+    
+    function triggerTaskAd(e, net, type, amt) {
+      if (Date.now() < (parseInt(localStorage.getItem(`cd_${net}`))||0)) return;
+      showGameAlert("LOADING AD...", "Please wait while sponsor loads...", "⏳", true);
+      
+      setTimeout(() => {
+        closeGameAlert();
+        if(type==='coin') { gold+=amt; triggerCasinoClaimAnimation(e.clientX, e.clientY, amt); }
+        else if(type==='spin') spinTickets+=amt; else boxTickets+=amt;
+        localStorage.setItem(`cd_${net}`, Date.now() + 180000); updateUI();
+        showGameAlert('REWARD GRANTED', `Success! Watch again in 3 minutes.`, '🎉');
+      }, 1500);
+    }
+
+    function getVarSpin(isTicket) { 
+      playHistoryCount++; 
+      localStorage.setItem('draco_play_count', playHistoryCount);
+      const rand = Math.random() * 100;
+      if (isTicket) {
+        if (rand < 3) return 0;   // 5000 Jackpot (3%)
+        if (rand < 20) return 1;  // OOPS (17%)
+        if (rand < 60) return 3;  // 100 (40%)
+        if (rand < 90) return 2;  // 800 (30%)
+        return 4;                 // 1200 (10%)
+      } else {
+        if (rand < 3) return 0;   // 5000 Jackpot (3%)
+        if (rand < 18) return 1;  // OOPS / 0 coins (15% to reclaim profit)
+        if (rand < 28) return 2;  // 800 (10%)
+        if (rand < 33) return 3;  // 100 (5%)
+        if (rand < 68) return 4;  // 1200 (+200 profit - 35%)
+        return 5;                 // 1500 (+500 profit - 32%)
+      }
+    }
+
+    function getVarBox(isTicket) { 
+      const rand = Math.random() * 100;
+      if (isTicket) {
+        if (rand < 2) return 5000;  
+        if (rand < 5) return 2000;  
+        if (rand < 20) return 0;    
+        if (rand < 50) return 100;  
+        if (rand < 80) return 200;  
+        return 300;                 
+      } else {
+        if (rand < 3) return 5000;  
+        if (rand < 18) return 0;    
+        if (rand < 28) return 800;  
+        if (rand < 60) return 1200; 
+        if (rand < 85) return 1500; 
+        return 2000;                
+      }
+    }
+
+    function openGameModal(type) { updateUI(); document.getElementById(`modal-${type}`).classList.remove('hidden'); document.getElementById(`modal-${type}`).classList.add('flex'); }
+
+    function triggerSpinWheel(e) {
+      if (isSpinning) return; let t = false;
+      if (spinTickets > 0) { spinTickets--; t = true; } else if (gold >= 1000) { gold -= 1000; } else return showGameAlert('FUNDS', 'Need 1 Tkt or 1000 🪙', '❌');
+      updateUI(); isSpinning = true; document.getElementById('action-btn-spin').disabled = true;
+      
+      const targetIdx = getVarSpin(t); 
+      const sliceCenterOffset = 30; 
+      const extraSpins = Math.floor(Math.random() * 3) + 4;
+      const targetDegree = 360 - (targetIdx * 60) - sliceCenterOffset;
+      
+      spinRot += (360 * extraSpins) + (targetDegree - (spinRot % 360));
+      
+      document.getElementById('the-spin-wheel').style.transform = `rotate(${spinRot}deg)`;
+      setTimeout(() => {
+        isSpinning = false; document.getElementById('action-btn-spin').disabled = false;
+        let r = [5000, 0, 800, 100, 1200, 1500][targetIdx];
+        if(r>0){ gold+=r; triggerCasinoClaimAnimation(window.innerWidth/2, window.innerHeight/2, r); showGameAlert('WON!', `+${r} 🪙`, '🎉'); } else showGameAlert('OOPS!', '', '😢');
+        updateUI();
+      }, 4100);
+    }
+
+    function triggerLuckyBox(e) {
+      if (isBoxRolling) return; let t = false;
+      if (boxTickets > 0) { boxTickets--; t = true; } else if (gold >= 1000) { gold -= 1000; } else return showGameAlert('FUNDS', 'Need 1 Tkt or 1000 🪙', '❌');
+      updateUI(); isBoxRolling = true; document.getElementById('action-btn-box').disabled = true;
+      let r = getVarBox(t); let h = ''; const em = ['💎', '🪙', '⚡', '👑', '🔥'];
+      for(let i=0; i<30; i++) h += `<span class="reel-item">${em[Math.floor(Math.random()*em.length)]}</span>`;
+      let f = r===0 ? [em[0],em[1],em[2]] : (r>=1500||(t&&r>=300)) ? ['🎁','🎁',em[0]] : [em[0],'🎁',em[1]];
+      f.forEach(x => h += `<span class="reel-item win-box">${x}</span>`); h += `<span class="reel-item">💎</span><span class="reel-item">💎</span>`;
+      const el = document.getElementById('lucky-box-reel'); el.style.transition = 'none'; el.style.transform = 'translateX(0)'; el.innerHTML = h;
+      void el.offsetWidth;
+      setTimeout(() => { el.style.transition = 'transform 3s cubic-bezier(0.15, 0.9, 0.25, 1)'; el.style.transform = `translateX(-2400px)`; }, 50);
+      setTimeout(() => {
+        document.querySelectorAll('.win-box').forEach(x => { if(x.innerHTML==='🎁') x.innerHTML='📦'; });
+        setTimeout(() => {
+          isBoxRolling=false; document.getElementById('action-btn-box').disabled=false;
+          if(r>0){ gold+=r; triggerCasinoClaimAnimation(window.innerWidth/2, window.innerHeight/2, r); showGameAlert('OPENED!', `+${r} 🪙`, '🎉'); } else showGameAlert('EMPTY!', '', '😢');
+          updateUI();
+        }, 500);
+      }, 3100);
+    }
+
+    function switchNavTab(tabId, btn) {
+      document.querySelectorAll('.tab-screen').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(b => { b.classList.remove('text-jungle-neon'); b.classList.add('text-gray-400'); });
+      document.getElementById('tab-' + tabId).classList.add('active');
+      btn.classList.remove('text-gray-400'); btn.classList.add('text-jungle-neon');
+      
+      if (tabId === 'leaderboard') {
+        loadLeaderboardFromFirebase();
+      }
+    }
+
+    function getBoostCost() { return boostCosts[boostLevel - 1] || (boostLevel * 5000); }
+    function getEnergyCost() { return energyCosts[energyLevel - 1] || (energyLevel * 5000); }
+    
+    function openBoostModal() { 
+      document.getElementById('boost-level-text').textContent = boostLevel; 
+      document.getElementById('modal-tap-power').textContent = `+${boostLevel} / Tap`; 
+      document.getElementById('boost-cost-badge').textContent = `${getBoostCost().toLocaleString()} 🪙`; 
+      document.getElementById('boost-modal').classList.remove('hidden'); document.getElementById('boost-modal').classList.add('flex'); 
+    }
+    
+    function buyTapBoostWithCoins(e) { 
+      const cost = getBoostCost(); 
+      if (gold >= cost) { 
+        gold -= cost; 
+        boostLevel += 1; 
+        updateUI(); 
+        openBoostModal(); 
+        triggerCasinoClaimAnimation(e.clientX, e.clientY, 0); 
+      } else {
+        showGameAlert('FUNDS', `Need ${cost.toLocaleString()} 🪙 to upgrade.`, '❌'); 
+      }
+    }
+    
+    function openEnergyModal() { 
+      document.getElementById('energy-level-text').textContent = energyLevel; 
+      document.getElementById('modal-energy-status').textContent = `${energy} / ${maxEnergy}`; 
+      document.getElementById('energy-cost-badge').textContent = `${getEnergyCost().toLocaleString()} 🪙`; 
+      document.getElementById('energy-modal').classList.remove('hidden'); document.getElementById('energy-modal').classList.add('flex'); 
+    }
+    
+    function upgradeMaxEnergyWithCoins(e) { 
+      const cost = getEnergyCost(); 
+      if (gold >= cost) { 
+        gold -= cost; 
+        energyLevel += 1; 
+        maxEnergy = 1000 + (energyLevel - 1) * 500; 
+        energy = maxEnergy; 
+        updateUI(); 
+        openEnergyModal(); 
+        triggerCasinoClaimAnimation(e.clientX, e.clientY, 0); 
+      } else {
+        showGameAlert('FUNDS', `Need ${cost.toLocaleString()} 🪙 to upgrade.`, '❌'); 
+      }
+    }
+
+    function formatTime(ms) {
+      if (ms <= 0) return "00:00"; 
+      let totalSec = Math.floor(ms / 1000);
+      let m = Math.floor(totalSec / 60).toString().padStart(2, '0'); 
+      let s = (totalSec % 60).toString().padStart(2, '0'); 
+      return `${m}:${s}`;
+    }
+
+    function updateUI() {
+      maxEnergy = 1000 + (energyLevel - 1) * 500;
+      
+      document.getElementById('dragon-level').textContent = boostLevel;
+      document.getElementById('gold-balance').textContent = gold.toLocaleString();
+      document.getElementById('per-tap-display').textContent = `+${boostLevel} GOLD`;
+      document.getElementById('energy-display').textContent = `${energy} / ${maxEnergy}`;
+      document.getElementById('energy-bar').style.width = `${(energy / maxEnergy) * 100}%`;
+      
+      document.getElementById('wallet-balance-text').textContent = gold.toLocaleString();
+      document.getElementById('wallet-inr-val').textContent = '₹' + (gold / 1000).toFixed(2);
+      
+      spinTickets = parseInt(spinTickets) || 0;
+      boxTickets = parseInt(boxTickets) || 0;
+
+      document.getElementById('main-spin-tickets').textContent = spinTickets;
+      document.getElementById('main-box-tickets').textContent = boxTickets;
+      document.getElementById('spin-modal-tickets').textContent = spinTickets;
+      document.getElementById('box-modal-tickets').textContent = boxTickets;
+
+      document.getElementById('spin-btn-label').textContent = spinTickets > 0 ? "PLAY (1 TKT)" : "PLAY (1K 🪙)";
+      document.getElementById('box-btn-label').textContent = boxTickets > 0 ? "PLAY (1 TKT)" : "PLAY (1K 🪙)";
+      
+      document.getElementById('boost-btn-sub').textContent = '+1 Tap • ' + (getBoostCost()/1000) + 'K 🪙';
+      document.getElementById('energy-btn-sub').textContent = '+500 ⚡ • ' + (getEnergyCost()/1000) + 'K 🪙';
+
+      localStorage.setItem('draco_gold', gold); 
+      localStorage.setItem('draco_spin_tkts', spinTickets); 
+      localStorage.setItem('draco_box_tkts', boxTickets);
+      localStorage.setItem('draco_boost_lvl', boostLevel); 
+      localStorage.setItem('draco_energy_lvl', energyLevel);
+    }
+
+    function updateLeaderboardTimer() {
+      const n = new Date(); const t = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1); const d = t - n;
+      document.getElementById('lb-timer').textContent = `${Math.floor((d/3600000)%24).toString().padStart(2,'0')}:${Math.floor((d/60000)%60).toString().padStart(2,'0')}:${Math.floor((d/1000)%60).toString().padStart(2,'0')}`;
+    }
+
+    setInterval(() => {
+      if (energy < maxEnergy) { energy = Math.min(maxEnergy, energy + 1); updateUI(); }
+      let now = Date.now();
+      ['adsgram', 'monetag', 'richads', 'tads', 'gigapub', 'onclicka', 'ads3'].forEach(n => {
+        let btn = document.getElementById(`btn-ad-${n}`);
+        if(btn) { 
+          let cd = parseInt(localStorage.getItem(`cd_${n}`))||0; 
+          if (cd > now) {
+            btn.disabled = true; 
+            btn.textContent = `WAIT (${formatTime(cd - now)})`; 
+          } else {
+            btn.disabled = false;
+            btn.textContent = "WATCH";
+          }
+        }
+      });
+      updateLeaderboardTimer();
+    }, 1000);
+
+    // ✅ DAILY CHECKIN MODAL LOGIC (FIXED)
+    function openDailyCheckinModal() {
+      const c = document.getElementById('daily-grid-container'); 
+      c.innerHTML = '';
+      
+      let todayClaimed = (lastClaimDate === new Date().toDateString());
+
+      for (let i = 0; i < 7; i++) {
+        const d = i + 1;
+        let p = false; 
+        let t = false; 
+
+        if (todayClaimed) {
+          if (currentStreakDay === 1) p = true; 
+          else p = (d < currentStreakDay);
+        } else {
+          p = (d < currentStreakDay);
+          t = (d === currentStreakDay);
+        }
+
+        c.innerHTML += `<div class="rounded-xl p-1.5 flex flex-col items-center border ${t?'bg-amber-500/20 border-amber-400 shadow-lg':'bg-black/40 border-gray-700 opacity-60'} ${d===7?'col-span-2':''}"><span class="text-[9px] text-gray-400">DAY ${d}</span><span class="text-base my-0.5">${d===7&&!p?'👑':p?'✅':'🪙'}</span><span class="text-[10px] font-bold text-jungle-amber">+${dailyRewards[i]}</span></div>`;
+      }
+      
+      const btn = document.getElementById('daily-claim-btn');
+      if (todayClaimed) { 
+        btn.disabled = true; 
+        btn.innerHTML = `CLAIMED ✅`; 
+        btn.classList.add('opacity-50'); 
+      } else { 
+        btn.disabled = false; 
+        btn.innerHTML = `CLAIM (${dailyRewards[currentStreakDay - 1]} 🪙)`; 
+        btn.classList.remove('opacity-50'); 
+      }
+      
+      document.getElementById('daily-modal').classList.remove('hidden'); 
+      document.getElementById('daily-modal').classList.add('flex');
+    }
+
+    // ✅ FIXED: DAILY CHECK-IN (Double Claim Bug Resolved)
+    function claimDailyReward(e) {
+      if (isDailyClaiming) return;
+      if (lastClaimDate === new Date().toDateString()) return;
+      
+      isDailyClaiming = true;
+      const btn = document.getElementById('daily-claim-btn');
+      if (btn) { btn.disabled = true; btn.classList.add('opacity-50'); }
+
+      const r = dailyRewards[currentStreakDay - 1] || 100; 
+      gold += r;
+      lastClaimDate = new Date().toDateString(); 
+      currentStreakDay = currentStreakDay >= 7 ? 1 : currentStreakDay + 1;
+      
+      localStorage.setItem('draco_last_claim_date', lastClaimDate); 
+      localStorage.setItem('draco_streak_day', currentStreakDay);
+      
+      updateUI(); 
+      document.getElementById('daily-btn-text').textContent = "CLAIMED"; 
+      openDailyCheckinModal(); 
+      triggerCasinoClaimAnimation(window.innerWidth/2, window.innerHeight/2, r);
+      syncToDatabase();
+
+      setTimeout(() => { isDailyClaiming = false; }, 1000);
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => { 
+      initTelegramUser();
+      document.getElementById('sound-icon').textContent = soundEnabled ? '🔊' : '🔇'; 
+      updateUI(); 
+      
+      // Auto-open daily modal if not claimed today
+      if(lastClaimDate !== new Date().toDateString()) {
+         setTimeout(openDailyCheckinModal, 500);
+      } else {
+         document.getElementById('daily-btn-text').textContent = "CLAIMED";
+      }
+    });
+  </script>
+</body>
+</html>
