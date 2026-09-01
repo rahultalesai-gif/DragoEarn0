@@ -1056,31 +1056,59 @@
     }, 2000);
 
     // ✅ THE 2.5 MINUTE INTERSTITIAL ALTERNATOR (Adsgram & Monetag)
-    let lastIntTime = Date.now();
-    let nextIntType = 'monetag';
+let lastIntTime = Date.now();
+let nextIntType = 'monetag';
+let isAdShowing = false;
 
-    async function showAlternatingInterstitial() {
-        let now = Date.now();
-        if (now - lastIntTime >= 150000) { // 150,000 ms = 2.5 Minutes
-            lastIntTime = now;
-            if (nextIntType === 'monetag') {
-                try {
-                    if(typeof show_11700800 === 'function') {
-                        show_11700800({ type: 'inApp', inAppSettings: { frequency: 99, capping: 0, interval: 0, timeout: 0, everyPage: false } });
+async function showAlternatingInterstitial() {
+    let now = Date.now();
+    if (now - lastIntTime < 150000 || isAdShowing) {
+        return;
+    }
+
+    lastIntTime = now;
+    isAdShowing = true;
+
+    if (nextIntType === 'monetag') {
+        nextIntType = 'adsgram';
+        try {
+            if (typeof show_11700800 === 'function') {
+                show_11700800({
+                    type: 'inApp',
+                    inAppSettings: {
+                        frequency: 1,
+                        capping: 1,
+                        interval: 150,
+                        timeout: 5
                     }
-                } catch(e) { console.log(e); }
-                nextIntType = 'adsgram';
+                }).finally(() => {
+                    setTimeout(() => { isAdShowing = false; }, 3000);
+                });
             } else {
-                try {
-                    if(window.Adsgram) {
-                        const IntController = window.Adsgram.init({ blockId: "int-45561" });
-                        IntController.show();
-                    }
-                } catch(e) { console.log(e); }
-                nextIntType = 'monetag';
+                isAdShowing = false;
             }
+        } catch(e) {
+            console.log(e);
+            isAdShowing = false;
+        }
+    } else {
+        nextIntType = 'monetag';
+        try {
+            if (window.Adsgram) {
+                const intController = window.Adsgram.init({ blockId: "int-45561" });
+                intController.show().finally(() => {
+                    setTimeout(() => { isAdShowing = false; }, 3000);
+                });
+            } else {
+                isAdShowing = false;
+            }
+        } catch(e) {
+            console.log(e);
+            isAdShowing = false;
         }
     }
+}
+
 
     function switchNavTab(tabId, btn) {
       document.querySelectorAll('.tab-screen').forEach(t => t.classList.remove('active'));
