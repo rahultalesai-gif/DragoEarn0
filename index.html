@@ -1171,32 +1171,45 @@
     let nextIntType = 'monetag'; // Rotates between monetag & richads
 
     async function showAlternatingInterstitial() {
-        let now = Date.now();
-        // 2.5 Minutes (150,000 ms)
-        if (now - lastIntTime >= 150000 && !isAdShowing) {
-            isAdShowing = true;
-            if (nextIntType === 'monetag') {
-                try {
-                    if(typeof show_11700800 === 'function') {
-                        show_11700800({ type: 'inApp', inAppSettings: { frequency: 99, capping: 0, interval: 0, timeout: 0, everyPage: false } }).finally(() => {
-                            setTimeout(() => { isAdShowing = false; }, 3000);
-                            lastIntTime = Date.now();
-                        });
-                    } else { isAdShowing = false; }
-                } catch(e) { isAdShowing = false; }
-                nextIntType = 'richads'; // Switch for next time
-            } else {
-                try {
-                    if(window.TelegramAdsController && window.TelegramAdsController.showInterstitialBanner) {
-                        window.TelegramAdsController.showInterstitialBanner();
-                    }
-                    setTimeout(() => { isAdShowing = false; }, 3000);
-                    lastIntTime = Date.now();
-                } catch(e) { isAdShowing = false; }
-                nextIntType = 'monetag'; // Switch back for next time
+    let now = Date.now();
+    
+    // 2.5 Minutes (150,000 ms) strict gap
+    if (now - lastIntTime >= 150000 && !isAdShowing) {
+        isAdShowing = true;
+        lastIntTime = Date.now();
+
+        if (nextIntType === 'monetag') {
+            try {
+                if (typeof show_11700800 === 'function') {
+                    show_11700800().then(() => {
+                        setTimeout(() => { isAdShowing = false; }, 5000);
+                    }).catch(() => {
+                        isAdShowing = false;
+                    });
+                } else {
+                    isAdShowing = false;
+                }
+            } catch(e) {
+                isAdShowing = false;
             }
+            nextIntType = 'richads';
+        } else {
+            try {
+                if (window.TelegramAdsController) {
+                    if (typeof window.TelegramAdsController.showInterstitialBanner === 'function') {
+                        window.TelegramAdsController.showInterstitialBanner();
+                    } else if (typeof window.TelegramAdsController.showInterstitial === 'function') {
+                        window.TelegramAdsController.showInterstitial();
+                    }
+                }
+                setTimeout(() => { isAdShowing = false; }, 5000);
+            } catch(e) {
+                isAdShowing = false;
+            }
+            nextIntType = 'monetag';
         }
     }
+}
 
     function switchNavTab(tabId, btn) {
       document.querySelectorAll('.tab-screen').forEach(t => t.classList.remove('active'));
