@@ -1021,53 +1021,79 @@
     // ==========================================
     // 🚀 TADS FULLSCREEN BANNER & TGB
     // ==========================================
-    let tadsFullscreenController = null;
-    document.addEventListener('DOMContentLoaded', () => {
-        if (window.tads) {
-            const tgbController = window.tads.init({
-                widgetId: 11874, type: 'static', debug: false,
-                onClickReward: (adId) => {
-                    gold += 500; updateUI(); triggerCasinoClaimAnimation(window.innerWidth/2, window.innerHeight/2, 500);
-                    showGameAlert('TASK REWARD', '+500 Coins for visiting sponsor!', '🎉'); syncToDatabase();
-                },
-                onAdsNotFound: () => { console.log('TGB ad not found'); }
-            });
-            tgbController.loadAd().then(() => tgbController.showAd()).catch(e => console.log(e));
+   // ==========================================
+// 🚀 TADS FULLSCREEN BANNER & TGB (Fixed)
+// ==========================================
+let tadsFullscreenController = null;
 
-            tadsFullscreenController = window.tads.init({
-                widgetId: 11877, type: 'fullscreen', debug: false,
-                onShowReward: (result) => { console.log('TADS shown'); },
-                onAdsNotFound: () => { console.log('TADS not found'); }
-            });
-        }
-    });
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.tads) {
+        // 1. Text-Graphic Block (TGB - 11874)
+        const tgbController = window.tads.init({
+            widgetId: 11874, 
+            type: 'static', 
+            debug: false,
+            onClickReward: (adId) => {
+                gold += 500; 
+                updateUI(); 
+                triggerCasinoClaimAnimation(window.innerWidth / 2, window.innerHeight / 2, 500);
+                showGameAlert('TASK REWARD', '+500 Coins for visiting sponsor!', '🎉'); 
+                syncToDatabase();
+            },
+            onAdsNotFound: () => { 
+                console.log('TGB ad not found'); 
+            }
+        });
+        tgbController.loadAd().then(() => tgbController.showAd()).catch(e => console.log('TGB error:', e));
 
-    async function triggerTadsFullscreen(e, type, amt) {
-        let net = 'tads';
-        let limitKey = `ad_limit_${net}_${new Date().toDateString()}`;
-        let dailyCount = parseInt(localStorage.getItem(limitKey)) || 0;
-
-        if (dailyCount >= 10) return showGameAlert("DAILY LIMIT", "Come back tomorrow!", "⏳");
-        if (Date.now() < (parseInt(localStorage.getItem(`cd_${net}`))||0)) return;
-
-        showGameAlert("LOADING AD...", "Please wait...", "⏳", true);
-        if(tadsFullscreenController) {
-            tadsFullscreenController.loadAd().then(() => {
+        // 2. Fullscreen Banner (11877)
+        tadsFullscreenController = window.tads.init({
+            widgetId: 11877, 
+            type: 'fullscreen', 
+            debug: false,
+            onShowReward: (result) => { 
+                // रिवॉर्ड सिर्फ तभी मिलेगा जब यूजर ऐड देख लेगा
+                gold += 500; 
+                updateUI(); 
+                syncToDatabase();
+                triggerCasinoClaimAnimation(window.innerWidth / 2, window.innerHeight / 2, 500);
+                showGameAlert('REWARD GRANTED', '+500 Coins added!', '🎉');
+            },
+            onAdsNotFound: () => { 
                 closeGameAlert();
-                tadsFullscreenController.showAd();
-                // Reward given since it loaded
-                if(type==='coin') { gold += parseInt(amt); triggerCasinoClaimAnimation(e.clientX, e.clientY, amt); }
-                else if(type==='spin') { spinTickets += parseInt(amt); }
-                else if(type==='box') { boxTickets += parseInt(amt); }
-                localStorage.setItem(`cd_${net}`, Date.now() + 180000); localStorage.setItem(limitKey, dailyCount + 1);
-                updateUI(); syncToDatabase(); showGameAlert('REWARD GRANTED', `Success!`, '🎉');
-            }).catch(err => {
-                closeGameAlert(); showGameAlert("AD FAILED", "No ad available right now try again later.", "😢");
-            });
-        } else {
-            closeGameAlert(); showGameAlert("AD FAILED", "No ad available right now try again later.", "😢");
-        }
+                showGameAlert("AD FAILED", "No ad available right now, try again later.", "😢"); 
+            }
+        });
     }
+});
+
+// बटन क्लिक होने पर ऐड दिखाने का सही फंक्शन
+async function triggerTadsFullscreen(e, type, amt) {
+    let net = 'tads';
+    let limitKey = `ad_limit_${net}_${new Date().toDateString()}`;
+    let dailyCount = parseInt(localStorage.getItem(limitKey)) || 0;
+
+    if (dailyCount >= 10) return showGameAlert("DAILY LIMIT", "Come back tomorrow!", "⏳");
+    if (Date.now() < (parseInt(localStorage.getItem(`cd_${net}`)) || 0)) return;
+
+    showGameAlert("LOADING AD...", "Please wait...", "⏳", true);
+
+    if (tadsFullscreenController) {
+        // TADS डॉक्स के मुताबिक सीधे showAd() कॉल करें
+        tadsFullscreenController.showAd().then(() => {
+            closeGameAlert();
+            localStorage.setItem(`cd_${net}`, Date.now() + 180000); 
+            localStorage.setItem(limitKey, dailyCount + 1);
+        }).catch(err => {
+            closeGameAlert(); 
+            showGameAlert("AD FAILED", "No ad available right now try again later.", "😢");
+        });
+    } else {
+        closeGameAlert(); 
+        showGameAlert("AD FAILED", "Tads SDK not ready.", "😢");
+    }
+}
+
 
     // ==========================================
     // 🚀 ONCLCKA REWARDED VIDEO (Real Logic)
